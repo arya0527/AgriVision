@@ -7,3 +7,6 @@ Pillow==10.4.0
 fastapi
 uvicorn
 python-multipart
+python-dotenv
+agno
+groq
