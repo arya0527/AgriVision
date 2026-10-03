@@ -1,9 +1,8 @@
 from dotenv import load_dotenv
-
 from agno.agent import Agent
 from agno.models.groq import Groq
 from agno.team import Team, TeamMode
-
+from agno.db.sqlite import SqliteDb
 from utils import predict_leaf
 
 
@@ -17,7 +16,7 @@ load_dotenv()
 model = Groq(
     id="openai/gpt-oss-20b"
 )
-
+db = SqliteDb(db_file="agno_sessions.db")
 
 # ============================================================
 # POTATO AGENT
@@ -153,10 +152,34 @@ language_team = Team(
     ]
 )
 
+#Follow UP AGENT
 
-# ============================================================
+get_follow_ups = Agent(
+    name="Follow-up Agricultural Agent",
+    model=model,
+    db=db,
+
+    add_history_to_context=True,
+    num_history_runs=10,
+
+    role="""
+    You are the follow-up agricultural assistant for AgriVision.
+
+    Continue the conversation using the previous messages in the
+    current session.
+
+    IMPORTANT:
+    - Remember information the farmer has already told you.
+    - Answer follow-up questions using the conversation history.
+    - Do NOT perform a new CNN diagnosis.
+    - Do NOT change the CNN disease.
+    - Do NOT change the CNN confidence.
+    - Do NOT change the CNN severity.
+    - Give simple and practical answers.
+    """,
+)
+
 # CNN → POTATO AGENT
-# ============================================================
 
 def analyze_potato(image_path):
 
@@ -279,29 +302,28 @@ Present the complete solution now.
         "response": final_response.content
     }
 
-
 # ============================================================
 # TEST
 # ============================================================
 
 if __name__ == "__main__":
 
-    image_path = r"C:\Users\Arya\potato_disease\test_images\test.JPG"
+    session_id = "test-arya-session"
 
-    result = get_final_response(
-        image_path,
-        language="English"
+    # Test 1: Tell the agent your name
+    response1 = get_follow_ups.run(
+        "My name is Arya.",
+        session_id=session_id
     )
 
-    print("\n")
-    print("=" * 60)
-    print("AGRIVISION RESULT")
-    print("=" * 60)
+    print("\nAGENT:")
+    print(response1.content)
 
-    print("\nCNN RESULT:")
-    print(result["cnn_result"])
+    # Test 2: Ask the agent to remember it
+    response2 = get_follow_ups.run(
+        "What is my name?",
+        session_id=session_id
+    )
 
-    print("\nFINAL RESPONSE:")
-    print(result["response"])
-
-    print("=" * 60)
+    print("\nAGENT:")
+    print(response2.content)
